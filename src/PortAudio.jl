@@ -161,6 +161,22 @@ function list_portaudio_devices()
     end
 end
 
+function interleave(deint_buffer, int_buffer, channels, frames)
+    for f=1:frames
+        for c=1:channels
+         int_buffer[(f-1)*channels + c] = deint_buffer[f,c]
+        end
+    end
+end
+
+function deinterleave(int_buffer, deint_buffer, channels, frames)
+    for f=1:frames
+        for c=1:channels
+         deint_buffer[f,c] = int_buffer[(f-1)*channels + c]
+        end
+    end
+end
+
 "Fill a buffer by a certain amount of samples from a Portaudio stream"
 function Base.read!(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::Integer=size(buffer,1))
     (stream_wrapper.num_inputs > size(buffer,2) || Nframes > size(buffer,1)) &&
@@ -169,7 +185,8 @@ function Base.read!(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
     tmp_rec_buffer  = zeros(stream_wrapper.sample_type, 20*4096)
 
     Pa_StartStream(stream_wrapper.stream)
-    read::Integer = 1
+    read::Integer   = 1
+    toread::Integer = 0
     while true
         while Pa_GetStreamReadAvailable(stream_wrapper.stream) < 10
               sleep(0.0001)
@@ -179,11 +196,13 @@ function Base.read!(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
           break
         end
         Pa_ReadStream(stream_wrapper.stream, tmp_rec_buffer, toread)
-        buffer[read:read+toread-1, :] = transpose(reshape(tmp_rec_buffer[1:toread*stream_wrapper.num_inputs], stream_wrapper.num_inputs, toread))
+        deinterleave(sub(tmp_rec_buffer,1:toread*stream_wrapper.num_inputs),
+                     sub(buffer,read:read+toread-1,:), stream_wrapper.num_inputs,
+                     toread)
         read = read + toread
     end
     Pa_StopStream(stream_wrapper.stream)
-    return buffer
+    nothing
 end
 
 "Read a certain amount of samples from a Portaudio stream"
@@ -194,48 +213,59 @@ function Base.read(stream_wrapper::PaStreamWrapper, Nframes::Integer)
 end
 
 "Play and record simultaneously"
-function playrec(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::Integer=size(buffer,1),
-                    num_input_channels::Integer=stream_wrapper.num_input_channels,
-                    num_output_channels::Integer=stream_wrapper.num_output_channels
-                    )
-    (stream_wrapper.num_outputs > size(buffer,2) || Nframes > size(buffer,1)) &&
+function playrec(stream_wrapper::PaStreamWrapper,
+                 play_buffer::PaBuffer,
+                 Nframes::Integer=size(play_buffer,1))
+
+     rec_buffer = zeros(stream_wrapper.sample_type, Nframes, stream_wrapper.num_inputs)
+     playrec!(stream_wrapper, play_buffer, rec_buffer, Nframes)
+     return rec_buffer
+ end
+
+"Play and record simultaneously using a pre-allocated recording buffer"
+function playrec!(stream_wrapper::PaStreamWrapper,
+                 play_buffer::PaBuffer, rec_buffer::PaBuffer,
+                 Nframes::Integer=size(play_buffer,1))
+
+    (stream_wrapper.num_outputs > size(play_buffer,2) || Nframes > size(play_buffer,1)) ||
+    (stream_wrapper.num_inputs > size(rec_buffer,2) ||  Nframes > size(rec_buffer,1)) &&
         error("Buffer dimensions do not fit stream parameters")
 
     tmp_rec_buffer  = zeros(stream_wrapper.sample_type, 20*4096)
     tmp_play_buffer = zeros(stream_wrapper.sample_type, 20*4096)
-
-    rec_buffer = zeros(stream_wrapper.sample_type, num_input_channels, Nframes)
-
-    buffer = transpose(buffer)
 
     Pa_StartStream(stream_wrapper.stream)
     written::Integer = 1
     read::Integer    = 1
     while true
         while Pa_GetStreamWriteAvailable(stream_wrapper.stream) < 10
-              sleep(0.0001)
+              sleep(0.001)
         end
         towrite = Pa_GetStreamWriteAvailable(stream_wrapper.stream)
         if written + towrite > Nframes
           break
         end
-        tmp_play_buffer[1:towrite*stream_wrapper.num_outputs] = reshape(buffer[1:stream_wrapper.num_outputs, written:written+towrite-1], towrite*stream_wrapper.num_outputs, 1)
-        Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer[1:towrite*stream_wrapper.num_outputs], towrite)
+        interleave(sub(play_buffer,written:written+towrite-1,1:stream_wrapper.num_outputs),
+                   sub(tmp_play_buffer,1:towrite*stream_wrapper.num_outputs),
+                   stream_wrapper.num_outputs, towrite)
+        Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer, towrite)
         written = written + towrite
 
         while Pa_GetStreamReadAvailable(stream_wrapper.stream) < 10
-              sleep(0.0001)
+              sleep(0.001)
         end
         toread = Pa_GetStreamReadAvailable(stream_wrapper.stream)
         if read + toread > Nframes
           break
         end
-        Pa_ReadStream(stream_wrapper.stream, tmp_rec_buffer[1:toread*stream_wrapper.num_inputs], toread)
-        rec_buffer[:, read:read+toread-1] = reshape(tmp_rec_buffer[1:toread*stream_wrapper.num_inputs], stream_wrapper.num_inputs, toread)
+        Pa_ReadStream(stream_wrapper.stream, tmp_rec_buffer, toread)
+        deinterleave(sub(tmp_rec_buffer,1:toread*stream_wrapper.num_inputs),
+                     sub(rec_buffer,read:read+toread-1,:), stream_wrapper.num_inputs,
+                     toread)
         read = read + toread
     end
     Pa_StopStream(stream_wrapper.stream)
-    return transpose(rec_buffer)
+    nothing
 end
 
 "Write a buffer to a PortAudio stream"
@@ -244,8 +274,6 @@ function Base.write(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
       error("Buffer dimensions do not fit stream parameters")
 
   tmp_play_buffer = zeros(stream_wrapper.sample_type, 20*4096)
-
-  buffer = transpose(buffer)
 
   Pa_StartStream(stream_wrapper.stream)
   written::Integer = 1
@@ -259,7 +287,9 @@ function Base.write(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
         if written + towrite > Nframes
           break
         end
-        tmp_play_buffer[1:towrite*stream_wrapper.num_outputs] = reshape(buffer[1:stream_wrapper.num_outputs, written:written+towrite-1], towrite*stream_wrapper.num_outputs, 1)
+        interleave(sub(buffer,written:written+towrite-1,1:stream_wrapper.num_outputs),
+                   sub(tmp_play_buffer,1:towrite*stream_wrapper.num_outputs),
+                   stream_wrapper.num_outputs, towrite)
         Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer, towrite)
         written = written + towrite
       end
