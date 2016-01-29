@@ -2,7 +2,7 @@ module PortAudio
 
 export PaStream, PaBuffer, PaSample, PaDeviceIndex, Pa_Initialize, Pa_Terminate
 export open, close, find_portaudio_device, get_portaudio_devices, list_portaudio_devices
-export read, write, playrec
+export read, read!, write, playrec!, playrec
 
 include(Pkg.dir("PortAudio", "deps", "deps.jl"))
 
