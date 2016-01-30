@@ -45,6 +45,7 @@ type PaStreamWrapper
     sample_rate::Real
     sample_format::PaSampleFormat
     sample_type::Type
+    buf_size::Integer
     num_inputs::Integer
     num_outputs::Integer
 end
@@ -118,7 +119,8 @@ function Base.open(ID::PaDeviceIndex,
     else
       stream = Pa_OpenDefaultStream(num_IO[1], num_IO[2], sample_format, sample_rate, buf_size)
     end
-    stream_wrapper = PaStreamWrapper(stream, ID, sample_rate, sample_format, sample_type, num_IO[1], num_IO[2])
+    stream_wrapper = PaStreamWrapper(stream, ID, sample_rate, sample_format,
+                                     sample_type, buf_size, num_IO[1], num_IO[2])
 end
 
 "Close a PortAudio stream"
