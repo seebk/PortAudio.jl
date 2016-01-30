@@ -161,7 +161,7 @@ function list_portaudio_devices()
     end
 end
 
-function interleave(deint_buffer, int_buffer, channels, frames)
+function interleave(deint_buffer, int_buffer, channels::Integer, frames::Integer)
     for f=1:frames
         for c=1:channels
          int_buffer[(f-1)*channels + c] = deint_buffer[f,c]
@@ -169,7 +169,7 @@ function interleave(deint_buffer, int_buffer, channels, frames)
     end
 end
 
-function deinterleave(int_buffer, deint_buffer, channels, frames)
+function deinterleave(int_buffer, deint_buffer, channels::Integer, frames::Integer)
     for f=1:frames
         for c=1:channels
          deint_buffer[f,c] = int_buffer[(f-1)*channels + c]
@@ -188,18 +188,20 @@ function Base.read!(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
     read::Integer   = 1
     toread::Integer = 0
     while true
-        while Pa_GetStreamReadAvailable(stream_wrapper.stream) < 10
-              sleep(0.0001)
-        end
         toread = Pa_GetStreamReadAvailable(stream_wrapper.stream)
-        if read + toread > Nframes
-          break
+        if toread > 16
+            if read + toread > Nframes
+              break
+            end
+            Pa_ReadStream(stream_wrapper.stream, tmp_rec_buffer, toread)
+            deinterleave(tmp_rec_buffer,
+                         sub(buffer,read:read+toread-1,:),
+                         stream_wrapper.num_inputs, toread)
+            read = read + toread
+        # sleep() causes an increased number of allocations here
+        #else
+        #    sleep(0.0002)
         end
-        Pa_ReadStream(stream_wrapper.stream, tmp_rec_buffer, toread)
-        deinterleave(sub(tmp_rec_buffer,1:toread*stream_wrapper.num_inputs),
-                     sub(buffer,read:read+toread-1,:), stream_wrapper.num_inputs,
-                     toread)
-        read = read + toread
     end
     Pa_StopStream(stream_wrapper.stream)
     nothing
@@ -238,31 +240,28 @@ function playrec!(stream_wrapper::PaStreamWrapper,
     written::Integer = 1
     read::Integer    = 1
     while true
-        while Pa_GetStreamWriteAvailable(stream_wrapper.stream) < 10
-              sleep(0.001)
-        end
         towrite = Pa_GetStreamWriteAvailable(stream_wrapper.stream)
-        if written + towrite > Nframes
-          break
+        if towrite > 16
+            if written + towrite > Nframes
+              break
+            end
+            interleave(sub(play_buffer,written:written+towrite-1,1:stream_wrapper.num_outputs),
+                       tmp_play_buffer, stream_wrapper.num_outputs, towrite)
+            Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer, towrite)
+            written = written + towrite
         end
-        interleave(sub(play_buffer,written:written+towrite-1,1:stream_wrapper.num_outputs),
-                   sub(tmp_play_buffer,1:towrite*stream_wrapper.num_outputs),
-                   stream_wrapper.num_outputs, towrite)
-        Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer, towrite)
-        written = written + towrite
 
-        while Pa_GetStreamReadAvailable(stream_wrapper.stream) < 10
-              sleep(0.001)
-        end
         toread = Pa_GetStreamReadAvailable(stream_wrapper.stream)
-        if read + toread > Nframes
-          break
+        if toread > 16
+            if read + toread > Nframes
+              break
+            end
+            Pa_ReadStream(stream_wrapper.stream, tmp_rec_buffer, toread)
+            deinterleave(tmp_rec_buffer,
+                         sub(rec_buffer,read:read+toread-1,:),
+                         stream_wrapper.num_inputs, toread)
+            read = read + toread
         end
-        Pa_ReadStream(stream_wrapper.stream, tmp_rec_buffer, toread)
-        deinterleave(sub(tmp_rec_buffer,1:toread*stream_wrapper.num_inputs),
-                     sub(rec_buffer,read:read+toread-1,:), stream_wrapper.num_inputs,
-                     toread)
-        read = read + toread
     end
     Pa_StopStream(stream_wrapper.stream)
     nothing
@@ -279,22 +278,22 @@ function Base.write(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
   written::Integer = 1
   towrite::Integer = 0
   while true
-     begin
-        while Pa_GetStreamWriteAvailable(stream_wrapper.stream) < 10
-              sleep(0.0001)
+       towrite = Pa_GetStreamWriteAvailable(stream_wrapper.stream)
+       if towrite > 16
+            if written + towrite > Nframes
+            break
+            end
+            interleave(sub(buffer,written:written+towrite-1,1:stream_wrapper.num_outputs),
+                     tmp_play_buffer, stream_wrapper.num_outputs, towrite)
+            Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer, towrite)
+            written = written + towrite
+
+        #else
+        #    sleep(0.0002)
         end
-        towrite = Pa_GetStreamWriteAvailable(stream_wrapper.stream)
-        if written + towrite > Nframes
-          break
-        end
-        interleave(sub(buffer,written:written+towrite-1,1:stream_wrapper.num_outputs),
-                   sub(tmp_play_buffer,1:towrite*stream_wrapper.num_outputs),
-                   stream_wrapper.num_outputs, towrite)
-        Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer, towrite)
-        written = written + towrite
-      end
   end
   Pa_StopStream(stream_wrapper.stream)
+  nothing
 end
 
 ############ Low-level wrappers for Portaudio function calls ############
