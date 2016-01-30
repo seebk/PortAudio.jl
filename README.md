@@ -19,6 +19,10 @@ an idea of how to use it. Feedback and contributions are welcome!
 ```julia
 Pa_Initialize()
 
+# create a random noise signal
+x = convert(Array{Float32}, randn(MersenneTwister(),sample_rate*3,2))
+x = x ./ 10
+
 # ID=-1 to use default device
 devID = convert(PaDeviceIndex, -1)
 
@@ -38,9 +42,18 @@ Pa_Initialize()
 # ID=-1 to use default device
 devID = convert(PaDeviceIndex, -1)
 
-# open stream and read a few seconds of audio
+# open stream and record a few seconds
 stream = open(devID, (2, 0), sample_rate, buf_size)
-x = read(stream, 2*sample_rate)
+z = read(stream, 2*sample_rate)
+close(stream)
+
+# open a duplex stream (not supported on all host API...)
+stream = open(devID, (2, 2), sample_rate, buf_size)
+# play some noise and record it at the same time
+x = convert(Array{Float32}, randn(MersenneTwister(),sample_rate*2,2))
+x = x ./ 10
+y = playrec(stream, x)
+# close the stream
 close(stream)
 
 Pa_Terminate()
