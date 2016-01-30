@@ -198,9 +198,9 @@ function Base.read!(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
                          sub(buffer,read:read+toread-1,:),
                          stream_wrapper.num_inputs, toread)
             read = read + toread
-        # sleep() causes an increased number of allocations here
-        #else
-        #    sleep(0.0002)
+        else
+            Libc.systemsleep(0.0005)
+            #sleep(0.0005) # sleep() causes an increased number of allocations here
         end
     end
     Pa_StopStream(stream_wrapper.stream)
@@ -262,6 +262,11 @@ function playrec!(stream_wrapper::PaStreamWrapper,
                          stream_wrapper.num_inputs, toread)
             read = read + toread
         end
+
+        if toread <= 16 && towrite <= 16
+            Libc.systemsleep(0.0005)
+            #sleep(0.0005) # sleep() causes an increased number of allocations here
+        end
     end
     Pa_StopStream(stream_wrapper.stream)
     nothing
@@ -287,9 +292,9 @@ function Base.write(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
                      tmp_play_buffer, stream_wrapper.num_outputs, towrite)
             Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer, towrite)
             written = written + towrite
-
-        #else
-        #    sleep(0.0002)
+        else
+            Libc.systemsleep(0.0005)
+            #sleep(0.0005) # sleep() causes an increased number of allocations here
         end
   end
   Pa_StopStream(stream_wrapper.stream)
