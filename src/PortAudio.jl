@@ -133,7 +133,7 @@ end
 
 "Find a PortAudio device by its device name and host API name"
 function find_device(device_name::AbstractString, device_api::AbstractString="")
-    devices = get_portaudio_devices()
+    devices = get_devices()
     device_ID::PaDeviceIndex = -1
     for (i,d) in enumerate(devices)
       if  bytestring(d.name) == bytestring(device_name) &&
@@ -159,7 +159,7 @@ end
 
 "Print a formatted list of all PortAudio devices"
 function list_devices()
-    devices = get_portaudio_devices()
+    devices = get_devices()
     for (i,d) in enumerate(devices)
         api_info = Pa_GetHostApiInfo(d.host_api)
         @printf("%3d: %s [%s], [%d/%d]\n", i-1, bytestring(d.name), bytestring(api_info.name), d.max_input_channels, d.max_output_channels)
