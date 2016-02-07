@@ -7,17 +7,17 @@ an idea of how to use it. Feedback and contributions are welcome!
 
 ## Basics
 
-  * call `Pa_Initialize()` before any other PortAudio related stuff
-  * finally call `Pa_Terminate()` to free any PortAudio ressources
-  * use `list_portaudio_devices()` to print an overview of available
+  * call `PortAudio.initialize()` before any other PortAudio related stuff
+  * finally call `PortAudio.terminate()` to free any PortAudio ressources
+  * use `PortAudio.list_devices()` to print an overview of available
     devices and their device IDs
-  * use `get_portaudio_devices()` to retrieve an array of device info
+  * use `PortAudio.get_devices()` to retrieve an array of device info
     structures
 
 ## Playback
 
 ```julia
-Pa_Initialize()
+PortAudio.initialize()
 
 # create a random noise signal
 x = convert(Array{Float32}, randn(MersenneTwister(),sample_rate*3,2))
@@ -31,13 +31,13 @@ stream = open(devID, (0, 2), sample_rate, buf_size)
 write(stream, x)
 close(stream)
 
-Pa_Terminate()
+PortAudio.terminate()
 ```
 
 ## Recording
 
 ```julia
-Pa_Initialize()
+PortAudio.initialize()
 
 # ID=-1 to use default device
 devID = convert(PaDeviceIndex, -1)
@@ -56,5 +56,5 @@ y = playrec(stream, x)
 # close the stream
 close(stream)
 
-Pa_Terminate()
+PortAudio.terminate()
 ```

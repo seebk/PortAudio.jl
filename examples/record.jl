@@ -4,12 +4,12 @@ using PortAudio
 buf_size = 256
 sample_rate = 48000
 
-Pa_Initialize()
+PortAudio.initialize()
 
 # use default device
 devID = convert(PaDeviceIndex, -1)
 # or retrieve a specific device by name
-#devID = find_portaudio_device("default")
+#devID = PortAudio.find_device("default")
 
 # open stream and record a few seconds
 stream = open(devID, (2, 0), sample_rate, buf_size)
@@ -25,4 +25,4 @@ y = playrec(stream, x)
 # close the stream
 close(stream)
 
-Pa_Terminate()
+PortAudio.terminate()

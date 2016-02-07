@@ -1,7 +1,7 @@
 module PortAudio
 
-export PaStream, PaBuffer, PaSample, PaDeviceIndex, Pa_Initialize, Pa_Terminate
-export open, close, find_portaudio_device, get_portaudio_devices, list_portaudio_devices
+export PaStream, PaBuffer, PaSample, PaDeviceIndex
+export open, close
 export read, read!, write, playrec!, playrec
 
 include(Pkg.dir("PortAudio", "deps", "deps.jl"))
@@ -82,6 +82,9 @@ end
 
 ############ High-level Julia interface ############
 
+initialize() = Pa_Initialize()
+terminate() = Pa_Terminate()
+
 "Open a PortAudio stream"
 function Base.open(ID::PaDeviceIndex,
                 num_IO::Tuple{Integer, Integer}, sample_rate::Real,
@@ -129,7 +132,7 @@ function Base.close(stream_wrapper::PaStreamWrapper)
 end
 
 "Find a PortAudio device by its device name and host API name"
-function find_portaudio_device(device_name::AbstractString, device_api::AbstractString="")
+function find_device(device_name::AbstractString, device_api::AbstractString="")
     devices = get_portaudio_devices()
     device_ID::PaDeviceIndex = -1
     for (i,d) in enumerate(devices)
@@ -145,7 +148,7 @@ function find_portaudio_device(device_name::AbstractString, device_api::Abstract
 end
 
 "Get a list of all available PortAudio devices"
-function get_portaudio_devices()
+function get_devices()
     device_count = Pa_GetDeviceCount()
     pa_devices = PaDeviceInfo[]
     for i in 1:device_count
@@ -155,7 +158,7 @@ function get_portaudio_devices()
 end
 
 "Print a formatted list of all PortAudio devices"
-function list_portaudio_devices()
+function list_devices()
     devices = get_portaudio_devices()
     for (i,d) in enumerate(devices)
         api_info = Pa_GetHostApiInfo(d.host_api)
