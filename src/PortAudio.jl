@@ -1,6 +1,6 @@
 module PortAudio
 
-export PaStream, PaBuffer, PaSample, PaDeviceIndex
+export PaStream, PaBuffer, PaSample
 export open, close
 export read, read!, write, playrec!, playrec
 
@@ -86,7 +86,7 @@ initialize() = Pa_Initialize()
 terminate() = Pa_Terminate()
 
 "Open a PortAudio stream"
-function Base.open(ID::PaDeviceIndex,
+function Base.open(ID::Integer,
                 num_IO::Tuple{Integer, Integer}, sample_rate::Real,
                 buf_size::Integer=1024, sample_format::PaSampleFormat=paFloat32)
 
@@ -134,7 +134,7 @@ end
 "Find a PortAudio device by its device name and host API name"
 function find_device(device_name::AbstractString, device_api::AbstractString="")
     devices = get_devices()
-    device_ID::PaDeviceIndex = -1
+    device_ID::Integer = -1
     for (i,d) in enumerate(devices)
       if  bytestring(d.name) == bytestring(device_name) &&
           (isempty(device_api) || bytestring(Pa_GetHostApiInfo(d.host_api).name)==device_api)

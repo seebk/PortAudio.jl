@@ -11,7 +11,7 @@ x = x ./ 10
 PortAudio.initialize()
 
 # use default device
-devID = convert(PaDeviceIndex, -1)
+devID = -1
 # or retrieve a specific device by name
 #devID = PortAudio.find_device("default")
 
