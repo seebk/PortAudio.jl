@@ -14,6 +14,8 @@ an idea of how to use it. Feedback and contributions are welcome!
   * use `PortAudio.get_devices()` to retrieve an array of device info
     structures
 
+NOTE: Buffer underflows/overflows may occur when a script is run for the first time due to JIT compilation.
+
 ## Playback
 
 ```julia
@@ -24,7 +26,7 @@ x = convert(Array{Float32}, randn(MersenneTwister(),sample_rate*3,2))
 x = x ./ 10
 
 # ID=-1 to use default device
-devID = convert(PaDeviceIndex, -1)
+devID = -1
 
 # open stream and play the audio
 stream = open(devID, (0, 2), sample_rate, buf_size)
@@ -40,19 +42,32 @@ PortAudio.terminate()
 PortAudio.initialize()
 
 # ID=-1 to use default device
-devID = convert(PaDeviceIndex, -1)
+devID = -1
 
 # open stream and record a few seconds
 stream = open(devID, (2, 0), sample_rate, buf_size)
 z = read(stream, 2*sample_rate)
 close(stream)
 
+PortAudio.terminate()
+```
+
+## Simultaneous playback and recording (duplex stream)
+
+```julia
+PortAudio.initialize()
+
+# ID=-1 to use default device
+devID = -1
+
 # open a duplex stream (not supported on all host API...)
 stream = open(devID, (2, 2), sample_rate, buf_size)
+
 # play some noise and record it at the same time
 x = convert(Array{Float32}, randn(MersenneTwister(),sample_rate*2,2))
 x = x ./ 10
 y = playrec(stream, x)
+
 # close the stream
 close(stream)
 
