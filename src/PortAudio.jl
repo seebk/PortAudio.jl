@@ -307,6 +307,8 @@ function Base.write(stream_wrapper::PaStreamWrapper, buffer::PaBuffer, Nframes::
 end
 
 ############ Low-level wrappers for Portaudio function calls ############
+# Most part of this interface was taken from the
+# [AudioIO.jl](https://github.com/ssfrr/AudioIO.jl) module
 
 Pa_GetDeviceInfo(i) = unsafe_load(ccall((:Pa_GetDeviceInfo, libportaudio),
                                  Ptr{PaDeviceInfo}, (PaDeviceIndex,), i))

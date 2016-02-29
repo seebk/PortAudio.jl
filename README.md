@@ -73,3 +73,7 @@ close(stream)
 
 PortAudio.terminate()
 ```
+
+## Credits
+
+Most parts of the low-level PortAudio interface was taken from the [AudioIO.jl](https://github.com/ssfrr/AudioIO.jl) module. 
