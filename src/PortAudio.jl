@@ -1,6 +1,6 @@
 module PortAudio
 
-export PaStream, PaBuffer, PaSample
+export PaStream, PaBuffer, PaSample, PaProcessor
 export open, close
 export read, read!, write, playrec!, playrec
 
@@ -39,12 +39,15 @@ const paNonInterleaved = convert(PaSampleFormat, 0x80000000)
 
 ############ Portaudio structures ############
 
+abstract PaProcessor{FS, Channels}
+
 type PaStreamWrapper
     stream::PaStream
     deviceID::PaDeviceIndex
     sample_rate::Real
     sample_format::PaSampleFormat
     sample_type::Type
+    async_io
     buf_size::Integer
     num_inputs::Integer
     num_outputs::Integer
@@ -123,11 +126,76 @@ function Base.open(ID::Integer,
       stream = Pa_OpenDefaultStream(num_IO[1], num_IO[2], sample_format, sample_rate, buf_size)
     end
     stream_wrapper = PaStreamWrapper(stream, ID, sample_rate, sample_format,
-                                     sample_type, buf_size, num_IO[1], num_IO[2])
+                                     sample_type, false, buf_size, num_IO[1], num_IO[2])
+end
+
+"Open a PortAudio stream in asynchronous mode and connect it with a callback function"
+function Base.open(ID::Integer,
+                proc::PaProcessor,
+                num_IO::Tuple{Integer, Integer}, sample_rate::Real,
+                buf_size::Integer=1024, sample_format::PaSampleFormat=paFloat32)
+
+    stream_wrapper = open(ID, num_IO, sample_rate::Real, buf_size, sample_format)
+
+    tmp_rec_buffer  = zeros(stream_wrapper.sample_type, 20*stream_wrapper.buf_size)
+    tmp_play_buffer = zeros(stream_wrapper.sample_type, 20*stream_wrapper.buf_size)
+
+    rec_buffer   = zeros(20*stream_wrapper.buf_size, maximum(num_IO))
+    play_buffer  = zeros(20*stream_wrapper.buf_size, maximum(num_IO))
+
+    stream_wrapper.async_io = @async begin
+        written::Integer = 1
+        read::Integer    = 1
+        toread::Integer  = 0
+        try
+            Pa_StartStream(stream_wrapper.stream)
+            while true
+                toread = Pa_GetStreamReadAvailable(stream_wrapper.stream)
+                if toread > 64
+                    ## read samples
+                    Pa_ReadStream(stream_wrapper.stream, tmp_rec_buffer, toread)
+                    deinterleave(tmp_rec_buffer,
+                                 sub(rec_buffer,1:toread,:),
+                                 stream_wrapper.num_inputs, toread)
+                    read = read + toread
+
+                    #### process
+                    proc.process(sub(rec_buffer,1:toread,:), sub(play_buffer,1:toread,:))
+
+                    ## write samples
+                    interleave(sub(play_buffer,1:toread,1:stream_wrapper.num_outputs),
+                               tmp_play_buffer, stream_wrapper.num_outputs, toread)
+                    Pa_WriteStream(stream_wrapper.stream, tmp_play_buffer, toread)
+                    written = written + toread
+                    sleep(0.001)
+                else
+                    #Libc.systemsleep(0.002)
+                    sleep(0.001) # sleep() causes an increased number of allocations here
+                                  # but Libc.systemsleep() does not run other tasks while sleeping
+                                  # and blocks the REPL
+                end
+            end
+        catch e
+            Pa_StopStream(stream_wrapper.stream)
+            if isa(e, InterruptException)
+                #
+            else
+                throw(e)
+            end
+        end
+    end
+
+    return stream_wrapper
 end
 
 "Close a PortAudio stream"
 function Base.close(stream_wrapper::PaStreamWrapper)
+    if isa(stream_wrapper.async_io, Task)
+        # send interrupt and wait for task to finish
+        Base.throwto(stream_wrapper.async_io, InterruptException())
+        wait(stream_wrapper.async_io)
+        stream_wrapper.async_io = false
+    end
     Pa_CloseStream(stream_wrapper.stream)
 end
 
