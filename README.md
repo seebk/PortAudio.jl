@@ -20,48 +20,38 @@ NOTE: Buffer underflows/overflows may occur when a script is run for the first t
 ## Playback
 
 ```julia
-PortAudio.initialize()
-
 # create a random noise signal
 x = convert(Array{Float32}, randn(MersenneTwister(),sample_rate*3,2))
 x = x ./ 10
 
-# ID=-1 to use default device
-devID = -1
+# simply play a single buffer
+play(x, sample_rate)
 
-# open stream and play the audio
+# open a stream and play the audio
+devID = -1 # default device
 stream = open(devID, (0, 2), sample_rate, buf_size)
 write(stream, x)
 close(stream)
-
-PortAudio.terminate()
 ```
 
 ## Recording
 
 ```julia
-PortAudio.initialize()
+# simply record a few samples
+y = record(2*sample_rate, 2, sample_rate)
 
-# ID=-1 to use default device
-devID = -1
-
-# open stream and record a few seconds
+# open a stream and record a few seconds
+devID = -1 # default device
 stream = open(devID, (2, 0), sample_rate, buf_size)
 z = read(stream, 2*sample_rate)
 close(stream)
-
-PortAudio.terminate()
 ```
 
 ## Simultaneous playback and recording (duplex stream)
 
 ```julia
-PortAudio.initialize()
-
-# ID=-1 to use default device
-devID = -1
-
 # open a duplex stream (not supported on all host API...)
+devID = -1 # default device
 stream = open(devID, (2, 2), sample_rate, buf_size)
 
 # play some noise and record it at the same time
@@ -71,10 +61,8 @@ y = playrec(stream, x)
 
 # close the stream
 close(stream)
-
-PortAudio.terminate()
 ```
 
 ## Credits
 
-Most parts of the low-level PortAudio interface was taken from the [AudioIO.jl](https://github.com/ssfrr/AudioIO.jl) module. 
+Most parts of the low-level PortAudio interface was taken from the [AudioIO.jl](https://github.com/ssfrr/AudioIO.jl) module.
