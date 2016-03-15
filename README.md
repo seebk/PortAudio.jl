@@ -6,13 +6,14 @@ development and not well documented, yet. See the `examples/` folder to get
 an idea of how to use it. Feedback and contributions are welcome!
 
 ## Basics
-
-  * call `PortAudio.initialize()` before any other PortAudio related stuff
-  * finally call `PortAudio.terminate()` to free any PortAudio ressources
   * use `PortAudio.list_devices()` to print an overview of available
     devices and their device IDs
   * use `PortAudio.get_devices()` to retrieve an array of device info
     structures
+  * `PortAudio.initialize()` and `PortAudio.terminate()` will be called  
+    automatically by all PortAudio.jl high-level API functions. However, it
+    can be called manually to trigger device initialization at a specific
+    instant, too.
 
 NOTE: Buffer underflows/overflows may occur when a script is run for the first time due to JIT compilation.
 

@@ -4,8 +4,6 @@ using PortAudio
 buf_size = 256
 sample_rate = 48000
 
-PortAudio.initialize()
-
 # use default device
 devID = -1
 # or retrieve a specific device by name
@@ -21,5 +19,3 @@ y = playrec(stream, x)
 
 # close the stream
 close(stream)
-
-PortAudio.terminate()

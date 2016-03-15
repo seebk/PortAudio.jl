@@ -38,8 +38,6 @@ end
 # -----
 # Main part starts here
 
-PortAudio.initialize()
-
 println("""\n\nThis is a realtime audio IO demo. It will read from the soundcard input,
 process samples with a bandpass filter and finally send it directly to the speakers.\n""")
 println("""WARNING: this may cause a feedback loop. Increase the volume of your
@@ -64,5 +62,3 @@ catch e
         throw(e)
     end
 end
-
-PortAudio.terminate()

@@ -103,6 +103,8 @@ function Base.open(ID::Integer,
     sample_format == paUInt8    ? sample_type = UInt8   :
     throw(ArgumentError("Invalid sample format"))
 
+    initialize()
+
     if ID >= 0
       ID > Pa_GetDeviceCount() && error("Device ID is too big")
       deviceInfo = Pa_GetDeviceInfo(ID)
@@ -197,6 +199,7 @@ function Base.close(stream_wrapper::PaStreamWrapper)
         stream_wrapper.async_io = false
     end
     Pa_CloseStream(stream_wrapper.stream)
+    terminate()
 end
 
 "Find a PortAudio device by its device name and host API name"
@@ -217,21 +220,25 @@ end
 
 "Get a list of all available PortAudio devices"
 function get_devices()
+    initialize()
     device_count = Pa_GetDeviceCount()
     pa_devices = PaDeviceInfo[]
     for i in 1:device_count
       push!(pa_devices, Pa_GetDeviceInfo(i-1))
     end
+    terminate()
     return pa_devices
 end
 
 "Print a formatted list of all PortAudio devices"
 function list_devices()
+    initialize()
     devices = get_devices()
     for (i,d) in enumerate(devices)
         api_info = Pa_GetHostApiInfo(d.host_api)
         @printf("%3d: %s [%s], [%d/%d]\n", i-1, bytestring(d.name), bytestring(api_info.name), d.max_input_channels, d.max_output_channels)
     end
+    terminate()
 end
 
 function interleave(deint_buffer, int_buffer, channels::Integer, frames::Integer)
