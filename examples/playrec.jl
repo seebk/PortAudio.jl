@@ -8,7 +8,7 @@ sample_rate = 48000
 x = convert(Array{Float32}, randn(MersenneTwister(),sample_rate*3,2))
 x = x ./ 10
 
-# simply play a single buffer
+# simply play a single buffer and record simultaneosly
 y = playrec(x, sample_rate)
 
 
