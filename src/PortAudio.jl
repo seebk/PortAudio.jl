@@ -2,7 +2,8 @@ module PortAudio
 
 export PaStream, PaBuffer, PaSample, PaProcessor
 export open, close
-export read, read!, write, playrec!, playrec, play, record, record!
+export write, read, read!, readwrite, readwrite!
+export play, record, record!, playrec, playrec!
 
 include(Pkg.dir("PortAudio", "deps", "deps.jl"))
 
@@ -110,6 +111,17 @@ function record(num_samples::Integer, num_channels::Integer, sample_rate::Real,
     read!(stream, buffer)
     close(stream)
     return buffer
+end
+
+"Play samples from a buffer and record audio at the same time"
+function playrec(play_buffer::PaBuffer, sample_rate::Real, ID::Integer=-1, buf_size::Integer=1024)
+    num_channels = size(play_buffer,2)
+    num_samples = size(play_buffer,1)
+    stream = open(ID, (num_channels, num_channels), sample_rate, buf_size)
+    rec_buffer = zeros(stream.sample_type, num_samples, num_channels)
+    readwrite!(stream, play_buffer, rec_buffer)
+    close(stream)
+    return rec_buffer
 end
 
 "Open a PortAudio stream"
@@ -319,17 +331,17 @@ function Base.read(stream_wrapper::PaStreamWrapper, Nframes::Integer)
 end
 
 "Play and record simultaneously"
-function playrec(stream_wrapper::PaStreamWrapper,
+function readwrite(stream_wrapper::PaStreamWrapper,
                  play_buffer::PaBuffer,
                  Nframes::Integer=size(play_buffer,1))
 
      rec_buffer = zeros(stream_wrapper.sample_type, Nframes, stream_wrapper.num_inputs)
-     playrec!(stream_wrapper, play_buffer, rec_buffer, Nframes)
+     readwrite!(stream_wrapper, play_buffer, rec_buffer, Nframes)
      return rec_buffer
  end
 
 "Play and record simultaneously using a pre-allocated recording buffer"
-function playrec!(stream_wrapper::PaStreamWrapper,
+function readwrite!(stream_wrapper::PaStreamWrapper,
                  play_buffer::PaBuffer, rec_buffer::PaBuffer,
                  Nframes::Integer=size(play_buffer,1))
 
