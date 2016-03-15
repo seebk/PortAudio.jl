@@ -4,6 +4,9 @@ using PortAudio
 buf_size = 256
 sample_rate = 48000
 
+# simply record a few samples
+y = record(2*sample_rate, 2, sample_rate)
+
 # use default device
 devID = -1
 # or retrieve a specific device by name

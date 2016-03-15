@@ -2,7 +2,7 @@ module PortAudio
 
 export PaStream, PaBuffer, PaSample, PaProcessor
 export open, close
-export read, read!, write, playrec!, playrec
+export read, read!, write, playrec!, playrec, play, record, record!
 
 include(Pkg.dir("PortAudio", "deps", "deps.jl"))
 
@@ -87,6 +87,30 @@ end
 
 initialize() = Pa_Initialize()
 terminate() = Pa_Terminate()
+
+"Play a single buffer. This will internally open a stream, write the samples and close the stream."
+function play(buffer::PaBuffer, sample_rate::Real, ID::Integer=-1, buf_size::Integer=1024)
+    stream = open(ID, (0, size(buffer,2)), sample_rate, buf_size)
+    write(stream, buffer)
+    close(stream)
+end
+
+"Record and fill a single buffer. This will internally open a stream, read the samples and close the stream."
+function record!(buffer::PaBuffer, sample_rate::Real, ID::Integer=-1, buf_size::Integer=1024)
+    stream = open(ID, (size(buffer,2), 0), sample_rate, buf_size)
+    read!(stream, buffer)
+    close(stream)
+end
+
+"Record some samples from a given number of channels and return them in a buffer"
+function record(num_samples::Integer, num_channels::Integer, sample_rate::Real,
+                ID::Integer=-1, buf_size::Integer=1024)
+    stream = open(ID, (num_channels, 0), sample_rate, buf_size)
+    buffer = zeros(stream.sample_type, num_samples, num_channels)
+    read!(stream, buffer)
+    close(stream)
+    return buffer
+end
 
 "Open a PortAudio stream"
 function Base.open(ID::Integer,
