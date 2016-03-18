@@ -1,5 +1,7 @@
 module PortAudio
 
+using Compat
+
 export PaStream, PaBuffer, PaSample, PaProcessor
 export open, close
 export write, read, read!, readwrite, readwrite!
@@ -20,8 +22,8 @@ typealias PaTime Cdouble
 typealias PaHostApiTypeId Cint
 typealias PaStreamCallback Void
 
-typealias PaSample Union{Float32, Int32, Int16, Int8, UInt8}
-typealias PaBuffer{PaSample} Union{Array{PaSample,1}, Array{PaSample,2}}
+typealias PaSample @compat Union{Float32, Int32, Int16, Int8, UInt8}
+typealias PaBuffer{PaSample} @compat Union{Array{PaSample,1}, Array{PaSample,2}}
 
 # Portaudio error codes
 const PA_NO_ERROR = 0
@@ -126,7 +128,7 @@ end
 
 "Open a PortAudio stream"
 function Base.open(ID::Integer,
-                num_IO::Tuple{Integer, Integer}, sample_rate::Real,
+                num_IO::(@compat Tuple{Integer, Integer}), sample_rate::Real,
                 buf_size::Integer=1024, sample_format::PaSampleFormat=paFloat32)
 
     stream::PaStream
@@ -170,7 +172,7 @@ end
 "Open a PortAudio stream in asynchronous mode and connect it with a callback function"
 function Base.open(ID::Integer,
                 proc::PaProcessor,
-                num_IO::Tuple{Integer, Integer}, sample_rate::Real,
+                num_IO::(@compat Tuple{Integer, Integer}), sample_rate::Real,
                 buf_size::Integer=1024, sample_format::PaSampleFormat=paFloat32)
 
     stream_wrapper = open(ID, num_IO, sample_rate::Real, buf_size, sample_format)
