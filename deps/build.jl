@@ -1,4 +1,5 @@
 using BinDeps
+using Compat
 
 @BinDeps.setup
 
@@ -19,4 +20,4 @@ end
     provides(WinRPM.RPM, "libportaudio2", libportaudio, os = :Windows)
 end
 
-@BinDeps.install Dict(:libportaudio => :libportaudio)
+@BinDeps.install @compat Dict(:libportaudio => :libportaudio)
