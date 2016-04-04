@@ -242,6 +242,7 @@ end
 
 "Find a PortAudio device by its device name and host API name"
 function find_device(device_name::AbstractString, device_api::AbstractString="")
+    initialize()
     devices = get_devices()
     device_ID::Integer = -1
     for (i,d) in enumerate(devices)
@@ -251,7 +252,7 @@ function find_device(device_name::AbstractString, device_api::AbstractString="")
           break
       end
     end
-
+    terminate()
     device_ID < 0 && error("Device '$device_name' not found!")
     return device_ID
 end
